@@ -28,8 +28,17 @@ namespace ELKStackDemo.Controllers
         [HttpPost("index")]
         public async Task<IActionResult> IndexProduct([FromBody] Product product)
         {
-            await _esService.IndexDocumentAsync(product);
-            _logger.LogInformation("Product indexed: {ProductName}", product.Name);
+            var (isSuccess, debugInfo) = await _esService.IndexDocumentAsync(product);
+
+            if (!isSuccess)
+            {
+                _logger.LogError("Failed to index product '{ProductName}'. Details: {DebugInfo}", product.Name, debugInfo);
+
+                // This returns the exact underlying server error back to Swagger
+                return StatusCode(500, $"Elasticsearch rejected the document.\n\nSERVER DETAILS:\n{debugInfo}");
+            }
+
+            _logger.LogInformation("Product successfully indexed: {ProductName}", product.Name);
             return Ok("Product indexed successfully");
         }
 
@@ -37,6 +46,13 @@ namespace ELKStackDemo.Controllers
         public async Task<IActionResult> Search(string keyword)
         {
             var results = await _esService.SearchAsync(keyword);
+            return Ok(results);
+        }
+
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAll()
+        {
+            var results = await _esService.GetAllDocumentsAsync();
             return Ok(results);
         }
     }
