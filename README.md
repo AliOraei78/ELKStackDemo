@@ -92,6 +92,13 @@ A hands-on, end-to-end learning implementation of the ELK Stack integrated into 
 * Restarted the ELK Stack services
 * Successfully tested full log pipeline flow from .NET → Logstash → Elasticsearch
 
+### Day 10: Visualization and Dashboard in Kibana
+
+* Create index patterns for logs and products
+* Build different visualizations (Log Levels, Products by Category, Average Price, etc.)
+* Create a full dashboard: `ELKStackDemo Overview`
+* Test real data visualization from the application
+
 ## How to Run the Project
 
 ### Prerequisites
