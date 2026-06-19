@@ -1,6 +1,8 @@
 ﻿using Elastic.Clients.Elasticsearch;
-using ELKStackDemo.Models;
+using Elastic.Clients.Elasticsearch.Aggregations;
+using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.Transport;
+using ELKStackDemo.Models;
 
 namespace ELKStackDemo.Services
 {
@@ -176,13 +178,112 @@ namespace ELKStackDemo.Services
                 .Query(q => q
                     .MultiMatch(m => m
                         .Query(keyword)
-                        .Fields(new[] { "name^3", "description" }) 
+                        .Fields(new[] { "name^3", "description" })
                     )
                 )
                 .Size(10)
             );
 
             return response.Documents.ToList();
+        }
+
+        // Advanced search with Bool + Filters
+        public async Task<List<Product>> AdvancedSearchAsync(string? keyword, string? category, decimal? minPrice, decimal? maxPrice)
+        {
+            var mustQueries = new List<Action<QueryDescriptor<Product>>>();
+            var filterQueries = new List<Action<QueryDescriptor<Product>>>();
+
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                mustQueries.Add(q => q.MultiMatch(mm => mm.Query(keyword).Fields(new[] { "name^3", "description" })));
+            }
+
+            if (!string.IsNullOrEmpty(category))
+            {
+                filterQueries.Add(q => q.Term(t => t.Field(p => p.Category).Value(category)));
+            }
+
+            if (minPrice.HasValue || maxPrice.HasValue)
+            {
+                // FIX: Wrap NumberRange inside the .Range() descriptor
+                filterQueries.Add(q => q.Range(r => r
+                    .NumberRange(nr => nr
+                        .Field(p => p.Price)
+                        .Gte(minPrice.HasValue ? (double)minPrice.Value : null)
+                        .Lte(maxPrice.HasValue ? (double)maxPrice.Value : null)
+                    )
+                ));
+            }
+
+            var response = await _client.SearchAsync<Product>(s => s
+                .Index(IndexName)
+                .Size(20)
+                // FIX: Wrap SortOrder inside the new FieldSort object
+                .Sort(so => so.Field(f => f.Price, new FieldSort { Order = SortOrder.Desc }))
+                .Query(q => q.Bool(b =>
+                {
+                    if (mustQueries.Any()) b.Must(mustQueries.ToArray());
+                    if (filterQueries.Any()) b.Filter(filterQueries.ToArray());
+                }))
+            );
+
+            return response.Documents.ToList();
+        }
+
+        // Aggregations (Terms + Average + Range)
+        public async Task<object> GetAggregationsAsync()
+        {
+            var response = await _client.SearchAsync<Product>(s => s
+                .Index(IndexName)
+                .Size(0) // Aggregation only, no documents
+                .Aggregations(a => a
+                    .Add("categories", agg => agg
+                        .Terms(t => t.Field(f => f.Category))
+                    )
+                    // FIX: Renamed Average() to Avg() to prevent System.Linq compiler confusion
+                    .Add("avg_price", agg => agg
+                        .Avg(avg => avg.Field(f => f.Price))
+                    )
+                    .Add("price_ranges", agg => agg
+                        .Range(r => r
+                            .Field(f => f.Price)
+                            // FIX: Use the fully qualified AggregationRange type
+                            .Ranges(new Elastic.Clients.Elasticsearch.Aggregations.AggregationRange[]
+                            {
+                                new() { To = 20000000, Key = "cheap" },
+                                new() { From = 20000000, To = 40000000, Key = "medium" },
+                                new() { From = 40000000, Key = "expensive" }
+                            })
+                        )
+                    )
+                )
+            );
+
+            if (!response.IsValidResponse)
+            {
+                System.Diagnostics.Debug.WriteLine($"Aggregations failed: {response.DebugInformation}");
+                return new { Error = "Failed to retrieve aggregations" };
+            }
+
+            // Extracting results and mapping them to standard C# objects so Swagger can serialize them
+            return new
+            {
+                Categories = response.Aggregations?.GetStringTerms("categories")?.Buckets
+                    .Select(b => new
+                    {
+                        Category = b.Key.Value,
+                        Count = b.DocCount
+                    }).ToList(),
+
+                AveragePrice = response.Aggregations?.GetAverage("avg_price")?.Value,
+
+                PriceRanges = response.Aggregations?.GetRange("price_ranges")?.Buckets
+                    .Select(b => new
+                    {
+                        Range = b.Key,
+                        Count = b.DocCount
+                    }).ToList()
+            };
         }
     }
 }

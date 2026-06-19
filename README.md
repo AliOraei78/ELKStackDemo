@@ -77,6 +77,14 @@ A hands-on, end-to-end learning implementation of the ELK Stack integrated into 
 * Added multiple search endpoints
 * Performed comprehensive testing of basic search operations through Swagger UI
 
+### Day 8: Advanced Search (Full-text, Aggregations)
+
+* Implemented advanced Bool Query with Filters (category and price range)
+* Added Sorting and Boosting in search queries
+* Implemented Aggregations (Terms, Average, Range)
+* Created Advanced Search and Aggregations endpoints
+* Successfully tested complex search queries and statistical analysis
+
 ## How to Run the Project
 
 ### Prerequisites

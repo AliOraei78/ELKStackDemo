@@ -100,5 +100,25 @@ namespace ELKStackDemo.Controllers
             var results = await _esService.SearchMultiMatchAsync(keyword);
             return Ok(results);
         }
+
+        [HttpGet("advanced-search")]
+        public async Task<IActionResult> AdvancedSearch(
+    string? keyword,
+    string? category,
+    decimal? minPrice,
+    decimal? maxPrice)
+        {
+            var results = await _esService.AdvancedSearchAsync(keyword, category, minPrice, maxPrice);
+            _logger.LogInformation("Advanced search performed - Keyword: {Keyword}, Results: {Count}", keyword, results.Count);
+            return Ok(results);
+        }
+
+        [HttpGet("aggregations")]
+        public async Task<IActionResult> GetAggregations()
+        {
+            var result = await _esService.GetAggregationsAsync();
+            _logger.LogInformation("Aggregations retrieved successfully");
+            return Ok(result);
+        }
     }
 }
