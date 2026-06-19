@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="docker/docker-compose.yml" />
+    <File Path="docker/logstash/logstash.yml" />
+    <File Path="docker/logstash/pipeline.conf" />
     <File Path="README.md" />
   </Folder>
   <Project Path="ELKStackDemo/ELKStackDemo.csproj" />

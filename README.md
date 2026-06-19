@@ -85,6 +85,13 @@ A hands-on, end-to-end learning implementation of the ELK Stack integrated into 
 * Created Advanced Search and Aggregations endpoints
 * Successfully tested complex search queries and statistical analysis
 
+### Day 9: Logstash Pipeline Configuration
+
+* Created `pipeline.conf` with HTTP Input, Grok + JSON Filters, and Elasticsearch Output
+* Mounted configuration into Docker Compose setup
+* Restarted the ELK Stack services
+* Successfully tested full log pipeline flow from .NET → Logstash → Elasticsearch
+
 ## How to Run the Project
 
 ### Prerequisites

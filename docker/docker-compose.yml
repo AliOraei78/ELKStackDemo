@@ -36,8 +36,12 @@ services:
     container_name: logstash
     ports:
       - "5044:5044"
+    volumes:
+      - ./logstash/pipeline.conf:/usr/share/logstash/pipeline/pipeline.conf
+      - ./logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
     environment:
       - xpack.security.enabled=false
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m 
     depends_on:
       - elasticsearch
     networks:
