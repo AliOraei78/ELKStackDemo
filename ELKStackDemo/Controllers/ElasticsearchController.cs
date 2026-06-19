@@ -20,7 +20,7 @@ namespace ELKStackDemo.Controllers
         [HttpPost("create-index")]
         public async Task<IActionResult> CreateIndex()
         {
-            await _esService.CreateIndexAsync();
+            await _esService.CreateIndexWithMappingAsync();
             _logger.LogInformation("Elasticsearch index 'products' created/verified");
             return Ok("Index created successfully");
         }
@@ -54,6 +54,22 @@ namespace ELKStackDemo.Controllers
         {
             var results = await _esService.GetAllDocumentsAsync();
             return Ok(results);
+        }
+
+        [HttpPost("create-index-mapping")]
+        public async Task<IActionResult> CreateIndexWithMapping()
+        {
+            await _esService.CreateIndexWithMappingAsync();
+            _logger.LogInformation("Index with custom mapping created successfully");
+            return Ok("Index with Mapping created successfully");
+        }
+
+        [HttpPost("bulk-index")]
+        public async Task<IActionResult> BulkIndex([FromBody] List<Product> products)
+        {
+            await _esService.BulkIndexAsync(products);
+            _logger.LogInformation("Bulk indexed {Count} products", products.Count);
+            return Ok($"Successfully indexed {products.Count} products");
         }
     }
 }

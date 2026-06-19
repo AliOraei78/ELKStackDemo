@@ -62,6 +62,14 @@ A hands-on, end-to-end learning implementation of the ELK Stack integrated into 
 * Creating `ElasticsearchController`
 * Full testing via Swagger UI
 
+### Day 6: Document Indexing and Management
+
+* Updated the `Product` model with mapping attributes
+* Implemented explicit index mapping using the Fluent API
+* Added bulk indexing functionality
+* Created endpoints for mapping management and bulk document insertion
+* Successfully tested document indexing operations
+
 ## How to Run the Project
 
 ### Prerequisites

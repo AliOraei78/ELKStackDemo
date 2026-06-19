@@ -11,26 +11,61 @@ namespace ELKStackDemo.Services
 
         public ElasticsearchService()
         {
-            // CHANGE THIS FROM https TO http
             var settings = new ElasticsearchClientSettings(new Uri("http://localhost:9200"))
-
-                // Keep this if security is enabled inside the container. 
-                // (If you disabled security completely in your docker setup, you can delete this line)
                 .Authentication(new BasicAuthentication("elastic", "A123456a"))
-
                 .DefaultIndex(IndexName)
                 .RequestTimeout(TimeSpan.FromMinutes(2));
 
             _client = new ElasticsearchClient(settings);
         }
 
-        // Create Index (if not exists)
-        public async Task CreateIndexAsync()
+        // Create Index With Explicit Mapping
+        public async Task CreateIndexWithMappingAsync()
         {
             var existsResponse = await _client.Indices.ExistsAsync(IndexName);
-            if (!existsResponse.Exists)
+            if (existsResponse.Exists)
             {
-                await _client.Indices.CreateAsync(IndexName);
+                await _client.Indices.DeleteAsync(IndexName);
+            }
+
+            var createResponse = await _client.Indices.CreateAsync(IndexName, c => c
+                .Mappings(m => m
+                    .Properties<Product>(p => p
+                        // Provide property selector as the first argument, configuration as the second
+                        .Text(x => x.Name, t => t
+                            .Analyzer("standard")
+                            .Fields(new Elastic.Clients.Elasticsearch.Mapping.Properties
+                            {
+                                { "keyword", new Elastic.Clients.Elasticsearch.Mapping.KeywordProperty() }
+                            })
+                        )
+                        .Text(x => x.Description, t => t.Analyzer("standard"))
+
+                        // Replaced .Number() with explicit .DoubleNumber()
+                        .DoubleNumber(x => x.Price)
+
+                        .Date(x => x.CreatedAt)
+                        .Keyword(x => x.Category)
+                    )
+                )
+            );
+
+            if (!createResponse.IsValidResponse)
+            {
+                throw new Exception($"Failed to create index: {createResponse.ElasticsearchServerError?.Error}");
+            }
+        }
+
+        public async Task BulkIndexAsync(List<Product> products)
+        {
+            var bulkResponse = await _client.BulkAsync(b => b
+                .IndexMany(products)
+            );
+
+            // Replaced EnsureSuccess() with IsValidResponse check
+            if (!bulkResponse.IsValidResponse)
+            {
+                throw new Exception($"Bulk indexing failed: {bulkResponse.DebugInformation}");
             }
         }
 
@@ -69,7 +104,7 @@ namespace ELKStackDemo.Services
         {
             var response = await _client.SearchAsync<Product>(s => s
                 .Index(IndexName)
-                .Query(q => q.MatchAll(m => { })) // Fixed: Added an empty lambda action
+                .Query(q => q.MatchAll(m => { }))
             );
             return response.Documents.ToList();
         }
