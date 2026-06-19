@@ -108,5 +108,81 @@ namespace ELKStackDemo.Services
             );
             return response.Documents.ToList();
         }
+
+        // Basic Search using Match Query
+        public async Task<List<Product>> SearchMatchAsync(string keyword)
+        {
+            var response = await _client.SearchAsync<Product>(s => s
+                .Index(IndexName)
+                .Query(q => q
+                    .Match(m => m
+                        .Field(f => f.Name)
+                        .Query(keyword)
+                    )
+                )
+                .Size(10)
+            );
+
+            return response.Documents.ToList();
+        }
+
+        // Exact Search using Term Query
+        public async Task<List<Product>> SearchTermAsync(string category)
+        {
+            var response = await _client.SearchAsync<Product>(s => s
+                .Index(IndexName)
+                .Query(q => q
+                    .Term(t => t
+                        .Field(f => f.Category)
+                        .Value(category)
+                    )
+                )
+            );
+
+            return response.Documents.ToList();
+        }
+
+        // Basic Bool Query (Match + Term Combination)
+        public async Task<List<Product>> SearchBoolAsync(string keyword, string? category = null)
+        {
+            var response = await _client.SearchAsync<Product>(s => s
+                .Index(IndexName)
+                .Query(q => q
+                    .Bool(b => b
+                        .Must(m => m
+                            .Match(mm => mm
+                                .Field(f => f.Name)
+                                .Query(keyword)
+                            )
+                        )
+                        .Filter(f => f
+                            .Term(t => t
+                                .Field(ff => ff.Category)
+                                .Value(category)
+                            )
+                        )
+                    )
+                )
+            );
+
+            return response.Documents.ToList();
+        }
+
+        // Multi-Field Search using MultiMatch Query
+        public async Task<List<Product>> SearchMultiMatchAsync(string keyword)
+        {
+            var response = await _client.SearchAsync<Product>(s => s
+                .Index(IndexName)
+                .Query(q => q
+                    .MultiMatch(m => m
+                        .Query(keyword)
+                        .Fields(new[] { "name^3", "description" }) 
+                    )
+                )
+                .Size(10)
+            );
+
+            return response.Documents.ToList();
+        }
     }
 }

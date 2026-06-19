@@ -71,5 +71,34 @@ namespace ELKStackDemo.Controllers
             _logger.LogInformation("Bulk indexed {Count} products", products.Count);
             return Ok($"Successfully indexed {products.Count} products");
         }
+
+        [HttpGet("search-match/{keyword}")]
+        public async Task<IActionResult> SearchMatch(string keyword)
+        {
+            var results = await _esService.SearchMatchAsync(keyword);
+            _logger.LogInformation("Match search performed for: {Keyword}, Results: {Count}", keyword, results.Count);
+            return Ok(results);
+        }
+
+        [HttpGet("search-term/{category}")]
+        public async Task<IActionResult> SearchTerm(string category)
+        {
+            var results = await _esService.SearchTermAsync(category);
+            return Ok(results);
+        }
+
+        [HttpGet("search-bool")]
+        public async Task<IActionResult> SearchBool(string keyword, string? category = null)
+        {
+            var results = await _esService.SearchBoolAsync(keyword, category);
+            return Ok(results);
+        }
+
+        [HttpGet("search-multi/{keyword}")]
+        public async Task<IActionResult> SearchMultiMatch(string keyword)
+        {
+            var results = await _esService.SearchMultiMatchAsync(keyword);
+            return Ok(results);
+        }
     }
 }

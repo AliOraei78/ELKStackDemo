@@ -70,6 +70,13 @@ A hands-on, end-to-end learning implementation of the ELK Stack integrated into 
 * Created endpoints for mapping management and bulk document insertion
 * Successfully tested document indexing operations
 
+### Day 7: Basic Search Queries
+
+* Implemented Match Query, Term Query, MultiMatch Query, and Bool Query
+* Resolved the CS1660 compilation error in the Fluent API
+* Added multiple search endpoints
+* Performed comprehensive testing of basic search operations through Swagger UI
+
 ## How to Run the Project
 
 ### Prerequisites
