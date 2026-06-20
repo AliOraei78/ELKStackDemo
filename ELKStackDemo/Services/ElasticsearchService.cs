@@ -338,5 +338,26 @@ namespace ELKStackDemo.Services
                 };
             }
         }
+
+        public async Task<List<Product>> GetAllProductsAsync()
+        {
+            var response = await _client.SearchAsync<Product>(s => s
+                .Index(IndexName)
+                .Size(100)
+                .Query(q => q.MatchAll())
+            );
+            return response.Documents.ToList();
+        }
+
+        public async Task UpdateProductAsync(Product product)
+        {
+            product.UpdatedAt = DateTime.UtcNow;
+            await _client.IndexAsync(product);
+        }
+
+        public async Task DeleteProductAsync(int id)
+        {
+            await _client.DeleteAsync<Product>(id);
+        }
     }
 }

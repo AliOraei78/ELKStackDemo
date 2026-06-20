@@ -114,6 +114,12 @@ A hands-on, end-to-end learning implementation of the ELK Stack integrated into 
 * Test functionality using Swagger, Kibana Dev Tools, and API endpoints
 * Understand the concepts of Shards, Replicas, and scalability in Elasticsearch
 
+### Day 13: Complete Project – Product Management Application
+
+* Implement full CRUD operations for products
+* Integrate advanced search and structured logging
+* Create a unified `ProductController`
+* Perform end-to-end testing of data flow and logging within the ELK Stack
 
 ## How to Run the Project
 
