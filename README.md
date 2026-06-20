@@ -99,6 +99,22 @@ A hands-on, end-to-end learning implementation of the ELK Stack integrated into 
 * Create a full dashboard: `ELKStackDemo Overview`
 * Test real data visualization from the application
 
+### Day 11: Error Handling, Security, and Best Practices
+
+* Implement Global Exception Handling
+* Add support for Elasticsearch API Keys
+* Introduce structured Validation and Error Handling
+* Document security and observability best practices
+
+### Day 12: Performance and Basic Scaling
+
+* Configure `NumberOfShards` and `NumberOfReplicas` during index creation
+* Implement Cluster Health Monitoring through the API
+* Fix compilation errors (`CS0103`, `CS0411`)
+* Test functionality using Swagger, Kibana Dev Tools, and API endpoints
+* Understand the concepts of Shards, Replicas, and scalability in Elasticsearch
+
+
 ## How to Run the Project
 
 ### Prerequisites

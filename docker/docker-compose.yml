@@ -2,12 +2,14 @@ version: '3.8'
 
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.2
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false # Disable SSL for easy local development
+      - ELASTIC_PASSWORD=A123456a
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
       memlock:
         soft: -1
@@ -19,28 +21,47 @@ services:
     networks:
       - elk-network
 
+  # This helper service automatically sets the password for kibana_system user
+  elasticsearch-setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.2
+    container_name: elasticsearch-setup
+    networks:
+      - elk-network
+    depends_on:
+      - elasticsearch
+    entrypoint: >
+      bash -c '
+        echo "Waiting for Elasticsearch to be ready...";
+        until curl -s -u elastic:A123456a http://elasticsearch:9200 | grep -q "tagline"; do sleep 3; done;
+        echo "Elasticsearch is up. Setting password for kibana_system...";
+        curl -s -X POST -u elastic:A123456a -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"A123456a\"}";
+        echo "Password for kibana_system set successfully!";
+      '
+
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.15.0
+    image: docker.elastic.co/kibana/kibana:9.4.2
     container_name: kibana
     ports:
       - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system # Changed from elastic to kibana_system
+      - ELASTICSEARCH_PASSWORD=A123456a
     depends_on:
       - elasticsearch
     networks:
       - elk-network
 
   logstash:
-    image: docker.elastic.co/logstash/logstash:8.15.0
+    image: docker.elastic.co/logstash/logstash:9.4.2
     container_name: logstash
     ports:
       - "5044:5044"
     volumes:
-      - ./logstash/pipeline.conf:/usr/share/logstash/pipeline/pipeline.conf
+      # Target file MUST be logstash.conf to override the default configuration
+      - ./logstash/pipeline.conf:/usr/share/logstash/pipeline/logstash.conf
       - ./logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
     environment:
-      - xpack.security.enabled=false
       - LS_JAVA_OPTS=-Xms256m -Xmx256m 
     depends_on:
       - elasticsearch

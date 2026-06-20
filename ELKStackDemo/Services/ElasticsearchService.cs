@@ -1,5 +1,6 @@
 ﻿using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Aggregations;
+using Elastic.Clients.Elasticsearch.IndexManagement;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Elastic.Transport;
 using ELKStackDemo.Models;
@@ -11,12 +12,19 @@ namespace ELKStackDemo.Services
         private readonly ElasticsearchClient _client;
         private const string IndexName = "products";
 
-        public ElasticsearchService()
+        public ElasticsearchService(IConfiguration configuration)
         {
-            var settings = new ElasticsearchClientSettings(new Uri("http://localhost:9200"))
-                .Authentication(new BasicAuthentication("elastic", "A123456a"))
-                .DefaultIndex(IndexName)
-                .RequestTimeout(TimeSpan.FromMinutes(2));
+            var esUri = new Uri("http://localhost:9200");
+            var settings = new ElasticsearchClientSettings(esUri);
+
+            var apiKey = configuration["Elasticsearch:ApiKey"];
+            if (!string.IsNullOrEmpty(apiKey))
+            {
+                settings = settings.Authentication(new ApiKey(apiKey));
+            }
+
+            settings = settings.RequestTimeout(TimeSpan.FromMinutes(2))
+                               .DefaultIndex(IndexName);
 
             _client = new ElasticsearchClient(settings);
         }
@@ -31,6 +39,10 @@ namespace ELKStackDemo.Services
             }
 
             var createResponse = await _client.Indices.CreateAsync(IndexName, c => c
+                .Settings(s => s
+                .NumberOfShards(1)           // One node
+                .NumberOfReplicas(0)         
+            )
                 .Mappings(m => m
                     .Properties<Product>(p => p
                         // Provide property selector as the first argument, configuration as the second
@@ -218,8 +230,11 @@ namespace ELKStackDemo.Services
             var response = await _client.SearchAsync<Product>(s => s
                 .Index(IndexName)
                 .Size(20)
-                // FIX: Wrap SortOrder inside the new FieldSort object
-                .Sort(so => so.Field(f => f.Price, new FieldSort { Order = SortOrder.Desc }))
+                // Correct sorting syntax for Elastic.Clients.Elasticsearch 9.x
+                .Sort(so => so.Field(f => f
+                    .Field(p => p.Price)
+                    .Order(SortOrder.Desc)
+                ))
                 .Query(q => q.Bool(b =>
                 {
                     if (mustQueries.Any()) b.Must(mustQueries.ToArray());
@@ -284,6 +299,44 @@ namespace ELKStackDemo.Services
                         Count = b.DocCount
                     }).ToList()
             };
+        }
+
+        // Cluster Health Monitoring - Final Stable Version
+        public async Task<object> GetClusterHealthAsync()
+        {
+            try
+            {
+                var healthResponse = await _client.Cluster.HealthAsync();
+
+                // Use GetAsync with an empty request object or use the GetAsync overload 
+                // that does not require a generic type argument to fetch index names.
+                var indicesResponse = await _client.Indices.GetAsync(new GetIndexRequest("_all"));
+
+                return new
+                {
+                    ClusterName = healthResponse.ClusterName,
+                    Status = healthResponse.Status.ToString(),
+                    NumberOfNodes = healthResponse.NumberOfNodes,
+                    ActiveShards = healthResponse.ActiveShards,
+                    RelocatingShards = healthResponse.RelocatingShards,
+                    InitializingShards = healthResponse.InitializingShards,
+                    UnassignedShards = healthResponse.UnassignedShards,
+                    TimedOut = healthResponse.TimedOut,
+                    // Access indices count from the response
+                    IndicesCount = indicesResponse.Indices?.Count ?? 0,
+                    Timestamp = DateTime.UtcNow
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error retrieving cluster health: {ex.Message}");
+                return new
+                {
+                    Error = "Failed to retrieve full cluster details",
+                    Status = "Yellow",
+                    Message = ex.Message
+                };
+            }
         }
     }
 }

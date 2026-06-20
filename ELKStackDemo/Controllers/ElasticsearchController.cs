@@ -28,18 +28,23 @@ namespace ELKStackDemo.Controllers
         [HttpPost("index")]
         public async Task<IActionResult> IndexProduct([FromBody] Product product)
         {
-            var (isSuccess, debugInfo) = await _esService.IndexDocumentAsync(product);
-
-            if (!isSuccess)
+            if (!ModelState.IsValid)
             {
-                _logger.LogError("Failed to index product '{ProductName}'. Details: {DebugInfo}", product.Name, debugInfo);
-
-                // This returns the exact underlying server error back to Swagger
-                return StatusCode(500, $"Elasticsearch rejected the document.\n\nSERVER DETAILS:\n{debugInfo}");
+                _logger.LogWarning("Invalid product data received: {Errors}", ModelState);
+                return BadRequest(ModelState);
             }
 
-            _logger.LogInformation("Product successfully indexed: {ProductName}", product.Name);
-            return Ok("Product indexed successfully");
+            try
+            {
+                await _esService.IndexDocumentAsync(product);
+                _logger.LogInformation("Product indexed successfully: {Name}", product.Name);
+                return Ok("Product indexed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to index product");
+                return StatusCode(500, "Failed to index product");
+            }
         }
 
         [HttpGet("search/{keyword}")]
@@ -119,6 +124,22 @@ namespace ELKStackDemo.Controllers
             var result = await _esService.GetAggregationsAsync();
             _logger.LogInformation("Aggregations retrieved successfully");
             return Ok(result);
+        }
+
+        [HttpGet("cluster-health")]
+        public async Task<IActionResult> GetClusterHealth()
+        {
+            try
+            {
+                var health = await _esService.GetClusterHealthAsync();
+                _logger.LogInformation("Cluster health checked successfully");
+                return Ok(health);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to check cluster health");
+                return StatusCode(500, new { Message = "Failed to retrieve cluster health" });
+            }
         }
     }
 }
